@@ -2,6 +2,11 @@
 
 Web application for analyzing student discussion data from Learning Management Systems.
 
+🚀 Live Demo
+Railway Deployment: https://lms-analytics-production.up.railway.app
+
+Note: Demo link is temporary and will be available for approximately 1 month. For permanent access, deploy locally using Docker.
+
 ## Problem
 
 Instructors need to understand student engagement in online discussions. Raw LMS data is hard to interpret without visualization and analytics.
@@ -196,3 +201,14 @@ docker-compose up --build
 - Python 3.11
 - PostgreSQL 15
 - Tested on macOS and Linux
+
+## Railway Deployment
+Check logs:
+
+Go to Railway dashboard → Your service → Logs tab
+Look for startup errors or missing environment variables
+
+Database connection issues:
+
+Verify PostgreSQL service is running in Railway
+Check DATABASE_URL environment variable is set
