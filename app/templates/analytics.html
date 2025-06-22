@@ -1,0 +1,373 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics - {{ course.course_name }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2>Course Analytics: {{ course.course_name }}</h2>
+        <p class="text-muted">{{ course.course_code }} - {{ course.semester }}</p>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 id="total-topics">-</h4>
+                        <p class="mb-0">Topics</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-comments fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 id="total-posts">-</h4>
+                        <p class="mb-0">Posts</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-comment fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 id="active-students">-</h4>
+                        <p class="mb-0">Active Students</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-users fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 id="avg-engagement">-</h4>
+                        <p class="mb-0">Avg Posts/Student</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-chart-line fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5>Student Engagement Rankings</h5>
+            </div>
+            <div class="card-body">
+                <div id="engagement-loading" class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p>Loading engagement data...</p>
+                </div>
+                <div id="engagement-table" style="display: none;">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>Student</th>
+                                    <th>Posts</th>
+                                    <th>Topics</th>
+                                    <th>Score</th>
+                                </tr>
+                            </thead>
+                            <tbody id="engagement-tbody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div id="engagement-error" style="display: none;">
+                    <div class="alert alert-warning">
+                        <h6>No engagement data available</h6>
+                        <p class="mb-0">This could mean no students have posted in this course yet.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Course Summary</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Course ID:</strong> {{ course_id }}</p>
+                <p><strong>Created:</strong> {{ course.course_created_at.strftime('%Y-%m-%d') if course.course_created_at else 'N/A' }}</p>
+                <p><strong>Status:</strong> <span class="badge bg-success">Active</span></p>
+                
+                <hr>
+                
+                <div id="quick-stats">
+                    <h6>Quick Stats</h6>
+                    <div id="stats-loading" class="text-center">
+                        <div class="spinner-border spinner-border-sm" role="status"></div>
+                        <small>Loading...</small>
+                    </div>
+                    <div id="stats-content" style="display: none;">
+                        <ul class="list-unstyled" id="stats-list">
+                        </ul>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <h6>Debug Info</h6>
+                <div id="debug-info" style="font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto; background: #f8f9fa; padding: 10px; border-radius: 4px;">
+                    Loading debug info...
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Discussion Timeline</h5>
+            </div>
+            <div class="card-body">
+                <div id="timeline-loading" class="text-center">
+                    <div class="spinner-border" role="status"></div>
+                    <p>Loading timeline...</p>
+                </div>
+                <div id="timeline-chart" style="height: 300px; display: none;"></div>
+                <div id="timeline-error" style="display: none;">
+                    <div class="alert alert-info">
+                        <p class="mb-0">No timeline data available for this course.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const courseId = {{ course_id }};
+
+// Debug function
+function debugLog(message, data) {
+    console.log('[Analytics Debug] ' + message, data);
+    const debugDiv = document.getElementById('debug-info');
+    if (debugDiv) {
+        debugDiv.innerHTML += '<br>' + new Date().toLocaleTimeString() + ': ' + message;
+        if (data) {
+            debugDiv.innerHTML += '<br>&nbsp;&nbsp;Data: ' + JSON.stringify(data, null, 2);
+        }
+    }
+}
+
+// Load student engagement data
+async function loadEngagementData() {
+    debugLog('Loading engagement data for course ' + courseId);
+    
+    try {
+        const response = await fetch('/api/analytics/student-engagement/' + courseId);
+        debugLog('Engagement response status: ' + response.status);
+        
+        if (!response.ok) {
+            throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+        }
+        
+        const data = await response.json();
+        debugLog('Engagement data received', data);
+        
+        document.getElementById('engagement-loading').style.display = 'none';
+        
+        if (data && data.length > 0) {
+            displayEngagementTable(data);
+            updateEngagementStats(data);
+            document.getElementById('engagement-table').style.display = 'block';
+        } else {
+            document.getElementById('engagement-error').style.display = 'block';
+        }
+        
+    } catch (error) {
+        debugLog('Error loading engagement data: ' + error.message);
+        document.getElementById('engagement-loading').style.display = 'none';
+        document.getElementById('engagement-error').style.display = 'block';
+    }
+}
+
+// Display engagement table
+function displayEngagementTable(data) {
+    const tbody = document.getElementById('engagement-tbody');
+    tbody.innerHTML = '';
+    
+    for (let i = 0; i < data.length; i++) {
+        const student = data[i];
+        const row = tbody.insertRow();
+        row.innerHTML = '<td>' + (i + 1) + '</td>' +
+                       '<td>' + student.student_name + '</td>' +
+                       '<td>' + student.posts + '</td>' +
+                       '<td>' + student.topics_participated + '</td>' +
+                       '<td>' + student.engagement_score + '</td>';
+    }
+}
+
+// Update engagement statistics
+function updateEngagementStats(data) {
+    if (data.length > 0) {
+        const totalPosts = data.reduce(function(sum, s) { return sum + s.posts; }, 0);
+        const avgPosts = (totalPosts / data.length).toFixed(1);
+        
+        document.getElementById('active-students').textContent = data.length;
+        document.getElementById('total-posts').textContent = totalPosts;
+        document.getElementById('avg-engagement').textContent = avgPosts;
+    }
+}
+
+// Load course statistics
+async function loadCourseStats() {
+    debugLog('Loading course statistics');
+    
+    try {
+        const response = await fetch('/api/analytics/course-stats');
+        debugLog('Course stats response status: ' + response.status);
+        
+        if (!response.ok) {
+            throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+        }
+        
+        const data = await response.json();
+        debugLog('Course stats received', data);
+        
+        // Find stats for this course
+        const courseStats = {
+            topics: 0,
+            posts: 0,
+            students: 0
+        };
+        
+        // Extract stats for current course (by course name)
+        const courseName = '{{ course.course_name }}';
+        
+        if (data.topic_stats) {
+            const topicStat = data.topic_stats.find(function(s) { return s.course === courseName; });
+            if (topicStat) courseStats.topics = topicStat.topics;
+        }
+        
+        if (data.activity_stats) {
+            const activityStat = data.activity_stats.find(function(s) { return s.course === courseName; });
+            if (activityStat) courseStats.posts = activityStat.posts;
+        }
+        
+        if (data.participation_stats) {
+            const participationStat = data.participation_stats.find(function(s) { return s.course === courseName; });
+            if (participationStat) courseStats.students = participationStat.active_students;
+        }
+        
+        // Update display
+        document.getElementById('total-topics').textContent = courseStats.topics;
+        
+        // Update stats list
+        document.getElementById('stats-loading').style.display = 'none';
+        document.getElementById('stats-content').style.display = 'block';
+        document.getElementById('stats-list').innerHTML = 
+            '<li>📊 ' + courseStats.topics + ' discussion topics</li>' +
+            '<li>💬 ' + courseStats.posts + ' total posts</li>' +
+            '<li>👥 ' + courseStats.students + ' active participants</li>' +
+            '<li>📈 ' + (courseStats.posts > 0 ? (courseStats.posts / Math.max(courseStats.students, 1)).toFixed(1) : 0) + ' posts per student</li>';
+        
+    } catch (error) {
+        debugLog('Error loading course stats: ' + error.message);
+        document.getElementById('stats-loading').style.display = 'none';
+        document.getElementById('stats-content').innerHTML = '<p class="text-danger">Error loading statistics</p>';
+    }
+}
+
+// Load timeline data
+async function loadTimelineData() {
+    debugLog('Loading timeline data for course ' + courseId);
+    
+    try {
+        const response = await fetch('/api/analytics/discussion-timeline?course_id=' + courseId);
+        debugLog('Timeline response status: ' + response.status);
+        
+        if (!response.ok) {
+            throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+        }
+        
+        const data = await response.json();
+        debugLog('Timeline data received', data);
+        
+        document.getElementById('timeline-loading').style.display = 'none';
+        
+        if (data && data.length > 0) {
+            displayTimelineChart(data);
+            document.getElementById('timeline-chart').style.display = 'block';
+        } else {
+            document.getElementById('timeline-error').style.display = 'block';
+        }
+        
+    } catch (error) {
+        debugLog('Error loading timeline data: ' + error.message);
+        document.getElementById('timeline-loading').style.display = 'none';
+        document.getElementById('timeline-error').style.display = 'block';
+    }
+}
+
+// Display timeline chart
+function displayTimelineChart(data) {
+    if (typeof Plotly !== 'undefined') {
+        const trace = {
+            x: data.map(function(d) { return d.date; }),
+            y: data.map(function(d) { return d.posts; }),
+            type: 'scatter',
+            mode: 'lines+markers',
+            name: 'Posts per Day',
+            line: {color: '#007bff'}
+        };
+        
+        const layout = {
+            title: '',
+            xaxis: {title: 'Date'},
+            yaxis: {title: 'Number of Posts'},
+            margin: {t: 30}
+        };
+        
+        Plotly.newPlot('timeline-chart', [trace], layout);
+    } else {
+        document.getElementById('timeline-chart').innerHTML = '<p class="text-warning">Plotly library not loaded. Timeline chart unavailable.</p>';
+    }
+}
+
+// Initialize when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    debugLog('Page loaded, initializing analytics');
+    loadEngagementData();
+    loadCourseStats();
+    loadTimelineData();
+});
+</script>
+{% endblock %}
