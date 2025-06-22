@@ -162,19 +162,6 @@ Your files must have exact column names:
 4. **View rankings** → Students ranked by posts + topic participation
 5. **Timeline chart** → Visual discussion activity over time
 
-## Development Decisions
-
-**Why FastAPI:** Modern async framework with automatic API docs
-
-**Why PostgreSQL:** Production-ready database with good analytics query support
-
-**Why Docker:** Consistent deployment environment
-
-**Data Processing:** Pandas handles Excel files robustly with multiple date formats
-
-**Authentication:** Simple JWT tokens with role-based permissions
-
-**UI Approach:** Server-side templates for simplicity, Plotly for interactive charts
 
 ## Troubleshooting
 
